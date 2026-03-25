@@ -26,38 +26,8 @@ class TextOCR:
 
             # Optional: convert 0/1 → 0/255 for visualization
             binary_img = (binary * 255).astype(np.uint8)
-            # Convert to grayscale (important for thresholding)
-            # gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
-            # clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-            # contrast = clahe.apply(gray)
-            # Apply threshold
-            # _, thresh = cv2.threshold(
-            #     contrast, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
-            # )
-            # img_np = np.array(img)
-
-            # # Convert to grayscale
-            # gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
-
-            # # Blur
-            # blur = cv2.GaussianBlur(gray, (5, 5), 0)
-
-            # # Threshold
-            # _, thresh = cv2.threshold(
-            #     blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
-            # )
-            # contrast = cv2.adaptiveThreshold(
-            # gray,
-            # 255,
-            # cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-            # cv2.THRESH_BINARY,
-            # 11,
-            # 2
-            # )
-            # Image.fromarray(contrast).show()
-            # Image.fromarray(thresh).show()
-            # OCR
-            Image.fromarray(binary_img).show()
+           
+           
             text = pytesseract.image_to_string(
                 binary_img
             )
