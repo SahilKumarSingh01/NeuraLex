@@ -1,5 +1,6 @@
 import spacy
 from typing import List, Dict
+from  schema.chunk import Chunk
 
 class CoreferenceResolver:
     def __init__(self):
@@ -65,15 +66,17 @@ class CoreferenceResolver:
 
         return "".join(resolved_tokens)
 
-    def resolve_chunk_pairs(self, chunks: List[Dict]) -> List[Dict]:
+    def resolve_chunk_pairs(self, chunks: List[Chunk]) -> List[Chunk]:
         if not chunks:
             return chunks
 
-        resolved_chunks = [chunk.copy() for chunk in chunks]
+        resolved_chunks:List[Chunk]=[]
+        for chunk in chunks:
+            resolved_chunks.append(chunk)
 
         for i in range(len(resolved_chunks) - 1):
-            chunk1 = resolved_chunks[i]["text"]
-            chunk2 = resolved_chunks[i + 1]["text"]
+            chunk1 = resolved_chunks[i].text
+            chunk2 = resolved_chunks[i + 1].text
 
             combined = f"{chunk1} {self.sep_token} {chunk2}"
             resolved_text = self.resolve(combined)
@@ -83,7 +86,7 @@ class CoreferenceResolver:
             else:
                 part1, part2 = resolved_text, chunk2
 
-            resolved_chunks[i]["text"] = part1.strip()
-            resolved_chunks[i + 1]["text"] = part2.strip()
+            resolved_chunks[i].text = part1.strip()
+            resolved_chunks[i + 1].text= part2.strip()
 
         return resolved_chunks
