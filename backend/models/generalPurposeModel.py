@@ -1,18 +1,22 @@
 from typing import List
+from  schema.chunk import Chunk
 import requests
-class GenralPurposeModel:
-    @staticmethod
-    def generate(context_chunks:List[dict],query:str)->str:
+import json
+class GeneralPurposeModel:
+    def __init__(self):
+        pass
+      
+    def generate(self,context_chunks:List[Chunk],query:str):
         context_part=[]
         
         for i in range(len(context_chunks)):
             context_part.append(
-                  f"[Source {i+1}: {context_chunks[i]['metadata']['source']}, "
-                  f"Page {context_chunks[i]['metadata'].get('page', 'N/A')}]\n{context_chunks[i]['text']}\n"
+                  f"[Source {i+1}: {context_chunks[i].metadata.get('source','N/A')}, "
+                  f"Page {context_chunks[i].metadata.get('page', 'N/A')} ,senetence-range {context_chunks[i].metadata.get('sentence_range','N/A')}]\n{context_chunks[i].text}\n"
             )
         
         context="\n".join(context_part)
-        print(context)
+        # print(context)
         prompt = f"""You are a helpful AI assistant. Answer the question based ONLY on the provided context.
 
         CONTEXT:
@@ -21,25 +25,42 @@ class GenralPurposeModel:
         QUESTION: {query}
 
         INSTRUCTIONS:
-        1. Answer based only on the context above
-        2. Cite source numbers (e.g., "According to Source 1...")
-        3. If context is insufficient, state that clearly
-        4. Be concise but thorough
+     1. Answer based only on the context above 
+     2. If context is insufficient, state that clearly
+     3. Be concise but thorough
+    
 
         ANSWER:"""  
+        
+        # print(prompt)
         
         url = "http://localhost:11434/api/generate"
         data={
             "model":"hf.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF:latest",
             "prompt":prompt,
-            "stream":False
+            "stream":True
         }
         response=requests.post(url,
-                  json=data
+                  json=data,
+                  stream=True
                   )
         
-        return response.json()["response"];
-    
+        # return response.json()["response"];
+       
+        
+        for line in response.iter_lines():
+            if not line:
+                continue
+
+            data = json.loads(line.decode("utf-8"))
+
+            
+            if "response" in data:
+                yield data.get('response',"")
+
+            
+            if data.get("done", False):
+                break
 
 if __name__=="__main__":
     context_chunks=[{
@@ -58,8 +79,8 @@ if __name__=="__main__":
         "type": "text"
       }
     }]
-    
-    response=GenralPurposeModel.generate(context_chunks,"what is Architecture Development Process in Iot")
+    llm_model=GeneralPurposeModel()
+    response=llm_model.generate(context_chunks,"what is Architecture Development Process in Iot")
     print(response)
 
         
