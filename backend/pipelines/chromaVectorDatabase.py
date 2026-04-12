@@ -90,6 +90,9 @@ class VectorDatabase:
 
         
         collection.delete(where=query)
+        #deleting in case collection is empty
+        if collection.count() == 0:
+            self.client.delete_collection(name=collectionName)
     
     
     def getChunk(self, collectionName: str, sourceFileName: List[str])->List[Chunk]:

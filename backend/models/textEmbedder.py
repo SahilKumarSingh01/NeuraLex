@@ -15,7 +15,7 @@ class TextEmbedder:
         }
 
         try:
-            response = requests.post(url, json=data, timeout=10)
+            response = requests.post(url, json=data, timeout=30)
             response.raise_for_status() 
             
             result = response.json()
@@ -23,7 +23,8 @@ class TextEmbedder:
             if "embeddings" not in result:
                 raise ValueError("Invalid response format")
 
-            return result["embeddings"][0]
+            # Return the full list of vectors to match your input list
+            return result["embeddings"]
 
         except requests.exceptions.RequestException as e:
             print(f"Request error: {e}")
@@ -39,4 +40,4 @@ if __name__ == "__main__":
 
     print(embeddings)
     print(len(embeddings))        # number of vectors
-    # print(len(embeddings[0]))     # dimension
+    # print(len(embeddings[0]))     # dimension is anything wrong here

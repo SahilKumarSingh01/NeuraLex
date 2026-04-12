@@ -42,7 +42,7 @@ class RAGSystem:
         return self.sources
     
     def query(self,ques:str,sourceFileNameList:List[str],collectionName:str):
-        quesEmbedding=self.text_embedder.encode([ques])
+        quesEmbedding=self.text_embedder.encode([ques])[0]
         
         relatedChunks=self.vector_db.search(quesEmbedding,collectionName,sourceFileNameList,5)
         
