@@ -24,23 +24,7 @@ export default function SummaryPanel() {
       <DocumentSourceManager />
 
       <div className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar">
-        
-        {/* SECTION 2: AI SUMMARY */}
-        <section>
-          <h2 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">
-            Analysis Summary
-          </h2>
-          <div className="bg-[#1e293b]/30 border border-gray-800 p-4 rounded-xl">
-            <p className="text-sm text-gray-300 leading-relaxed">
-              {summary || "Select documents and ask a question to generate an automated summary of the findings."}
-            </p>
-          </div>
-        </section>
-
-        {/* SECTION 3: CITATIONS & SOURCES */}
-        {/* Strictly displays the snippets and page numbers */}
-        <CitationPanel />
-        
+        <CitationPanel />        
       </div>
     </div>
   );

@@ -38,13 +38,11 @@ export default function DocumentSourceManager() {
       } catch (err) {
         console.error(`Upload failed for ${fileName}`, err);
       } finally {
-        setTimeout(() => {
-          setUploadQueue((prev) => {
-            const newQueue = { ...prev };
-            delete newQueue[fileName];
-            return newQueue;
-          });
-        }, 3000);
+        setUploadQueue((prev) => {
+          const newQueue = { ...prev };
+          delete newQueue[fileName];
+          return newQueue;
+        });
       }
     });
 

@@ -1,6 +1,6 @@
 from fastapi import FastAPI,File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware  # Import this
-from typing import Annotated,List
+from typing import Annotated,List,Dict
 import os
 from models.documentLoader import DocumentLoader
 import json
@@ -100,23 +100,33 @@ async  def delete_upload_file(files:List[str],collectionName:str="default"):
             "files":json.dumps(files),
             "status":"deleted"
         }
-    
-@app.post("/generate")
-def query(ques:str,sourceFileNameList:List[str],collectionName:str="default"):
-    
+
+@app.post("/chat")
+async def chat(messages: List[Dict[str, str]], sourceFileNameList: List[str], collectionName: str = "default", mode: str = "Normal"):
     def stream():
-        itr=rag.query(ques, sourceFileNameList, collectionName)
-        llm_response_source_List=itr[0]
-        yield json.dumps({"llm_response_source":llm_response_source_List})+'\n'
+        itr = rag.query(messages, sourceFileNameList, collectionName, mode)
+        
+        sources = itr[0]
+        yield json.dumps({"type": "source", "content": sources}) + '\n'
         
         for chunk in itr[1]:
-          yield json.dumps({"llm_response":chunk})+'\n'
-          
+            yield chunk
+
+    return StreamingResponse(stream(), media_type="application/x-ndjson")
+
+@app.post("/generate")
+async def generate(ques: str, sourceFileNameList: List[str], collectionName: str = "default", mode: str = "Normal"):
+    def stream():
+        messages = [{"role": "user", "content": ques}]
+        itr = rag.query(messages, sourceFileNameList, collectionName, mode)
         
-            
-    # media_type="application/json"
-    # media_type="text/plain"
-    return StreamingResponse(stream(), media_type="application/json")
+        sources = itr[0]
+        yield json.dumps({"type": "source", "content": sources}) + '\n'
+        
+        for chunk in itr[1]:
+            yield chunk
+
+    return StreamingResponse(stream(), media_type="application/x-ndjson")
 
 @app.post("/getChunks")
 def getChunks(files:List[str],collectionName:str="default"):

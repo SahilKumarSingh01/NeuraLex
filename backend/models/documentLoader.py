@@ -63,7 +63,7 @@ class DocumentLoader:
                             vector=None,
                             metadata={
                                 "source": fileName,
-                            "page": page_num + 1,
+                                "page": page_num + 1,
                                 "type": "text",
                                 "filePath":file_path
                             }

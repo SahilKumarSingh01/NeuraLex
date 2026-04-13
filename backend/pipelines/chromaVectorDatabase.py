@@ -12,21 +12,21 @@ class VectorDatabase:
         if not chunks:
             return
         
-        collection = self.client.get_or_create_collection(name=collectionName)
+        collection = self.client.get_or_create_collection(name=collectionName,metadata={"hnsw:space": "cosine"}) # l2 is the default)
         
         vectors = [chunk.vector for chunk in chunks]
         documents = [chunk.text for chunk in chunks]
         metadatas = [chunk.metadata for chunk in chunks]
         ids = [str(chunk.id) for chunk in chunks]
         
-        collection.add(
+        collection.upsert(
             embeddings=vectors,
             documents=documents,
             metadatas=metadatas,
             ids=ids
         )
     
-    def search(self, quesEmbedding, collectionName: str, sourceFileName: List[str], top_k: int = 5) -> List[Chunk]:
+    def search(self, quesEmbedding, collectionName: str, sourceFileName: List[str], top_k: int = 5,threshold:float=1.0) -> List[Chunk]:
         results = []
 
         try:
@@ -40,14 +40,17 @@ class VectorDatabase:
             query={
                 "$or": querySourceList
             }
-        else:
+        elif len(querySourceList)==1:
             query=querySourceList[0]
+        else :
+            return results
             
 
         query_result = collection.query(
             query_embeddings=[quesEmbedding],
             n_results=top_k,
-            where=query
+            where=query,
+            include=["documents", "metadatas", "distances"]
         )
 
         if not query_result or not query_result.get("ids") or len(query_result["ids"]) == 0:
@@ -56,14 +59,17 @@ class VectorDatabase:
         ids = query_result["ids"][0]
         documents = query_result["documents"][0]
         metadatas = query_result["metadatas"][0]
+        distances = query_result["distances"][0]
 
-        for id_, doc, meta in zip(ids, documents, metadatas):
-            results.append(Chunk(
-                id=id_,
-                text=doc,
-                vector=None,
-                metadata=meta
-            ))
+        for id_, doc, meta,dist in zip(ids, documents, metadatas,distances):
+            # print("chromadb",doc,dist)
+            if dist <= threshold:
+                results.append(Chunk(
+                    id=id_,
+                    text=doc,
+                    vector=None,
+                    metadata=meta
+                ))
             
         # print(results)
 
