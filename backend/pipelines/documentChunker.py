@@ -1,61 +1,75 @@
 import spacy
 from typing import List
-from  schema.chunk import Chunk
-import math
+from schema.chunk import Chunk
 from models.textEmbedder import TextEmbedder
 
 class DocumentChunker:
     
     def __init__(self):
-        self.nlp = spacy.load("en_core_web_sm")
+        # We need tok2vec for the statistical senter to work accurately with abbreviations
+        # 1. Load the blank model for speed (or the small model if you prefer)
+        # We use spacy.blank to avoid any hidden dependency issues with 'sm'
+        self.nlp = spacy.blank("en")
         
-    
-    def split_into_sentence_chunk(self, pageText: str):
-        doc = self.nlp(pageText)
-        return [sent.text for sent in doc.sents]
-    
+        # 2. Add the sentencizer specifically
+        # This component is designed to set sentence boundaries
+        self.nlp.add_pipe("sentencizer")
+        
     def chunk_embedder(self, chunks: List[Chunk]) -> List[Chunk]:
-        result: List[Chunk] = []
+        intermediate_chunks: List[Chunk] = []
         
-        for chunk in chunks:
-            sentences = self.split_into_sentence_chunk(chunk.text)
-            
-            newChunkText = ""
+        # --- Step 1: Batch NLP Processing (The Speedup) ---
+        # Collect all texts and process them in one go using nlp.pipe
+        raw_texts = [chunk.text for chunk in chunks]
+        # batch_size=20 is balanced for university-level hardware
+        docs = list(self.nlp.pipe(raw_texts, batch_size=20))
+        
+        # --- Step 2: Text Splitting Logic ---
+        # Zip the original chunk objects with the processed spaCy docs
+        for original_chunk, doc in zip(chunks, docs):
+            sentences = [sent.text for sent in doc.sents]
+            new_chunk_text = ""
             sentence_id = 0
-            leftStart = 0
+            left_start = 0
             
             for i, sentence in enumerate(sentences):
-                
-                if len(newChunkText + sentence) <= 1000:
-                    newChunkText += sentence
+                # print("chunker",sentence)
+                # Using 1000 character limit
+                if len(new_chunk_text) + len(sentence) <= 1000:
+                    # Avoid leading space on the first sentence
+                    new_chunk_text += (" " if new_chunk_text else "") + sentence
                 else:
+                    c = Chunk(
+                        id=f"{original_chunk.id}_{sentence_id}",
+                        text=new_chunk_text,
+                        vector=None,
+                        metadata=dict(original_chunk.metadata)
+                    )
+                    c.metadata["sentence_range"] = f"{left_start}-{i}"
+                    intermediate_chunks.append(c)
                     
-                    result.append(Chunk(
-                        id=f"{chunk.id}_{sentence_id}",
-                        text=newChunkText,
-                        vector=TextEmbedder.encode(newChunkText),
-                        metadata=dict(chunk.metadata)
-                    ))
-                    
-                    result[-1].metadata["sentence_range"] = f"{leftStart}-{i}"
-                    
-                    
-                    overlap_len = int(0.2 * len(newChunkText))
-                    overlapText = newChunkText[-overlap_len:]
-                    
-                    newChunkText = overlapText + sentence
-                    leftStart = i
+                    new_chunk_text = sentence
+                    left_start = i
                     sentence_id += 1
             
-         
-            if newChunkText:
-                result.append(Chunk(
-                    id=f"{chunk.id}_{sentence_id}",
-                    text=newChunkText,
-                    vector=TextEmbedder.encode([newChunkText]),
-                    metadata=dict(chunk.metadata)
-                ))
-                result[-1].metadata["sentence_range"] = f"{leftStart}-{len(sentences)}"
-        # print(result[0])
-        # print(type(result[0].vector))
-        return result
+            # Catch trailing text for this specific doc
+            if new_chunk_text:
+                c = Chunk(
+                    id=f"{original_chunk.id}_{sentence_id}",
+                    text=new_chunk_text,
+                    vector=None,
+                    metadata=dict(original_chunk.metadata)
+                )
+                c.metadata["sentence_range"] = f"{left_start}-{len(sentences)}"
+                intermediate_chunks.append(c)
+
+        # --- Step 3: Batch Embedding (GPU Efficiency) ---
+        if intermediate_chunks:
+            all_texts = [c.text for c in intermediate_chunks]
+            # Send all processed sentences to the embedder in one batch
+            all_vectors = TextEmbedder.encode(all_texts) 
+            
+            for i, vector in enumerate(all_vectors):
+                intermediate_chunks[i].vector = vector
+                
+        return intermediate_chunks

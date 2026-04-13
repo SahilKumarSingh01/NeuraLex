@@ -41,7 +41,7 @@ class DocumentLoader:
                 file_bytes=  DocumentLoader.load_file(collectionName,fileName)
                 if file_bytes==None: continue
                 ext=fileName.split(".")[1]
-                file_path = os.path.abspath(os.path.join(collection_path, fileName))
+                file_path = "file:///"+os.path.abspath(os.path.join(collection_path, fileName)).replace("\\","/")
                
                 doc = fitz.open(stream=file_bytes, filetype=ext)
                 chunk_idx=-1
@@ -63,7 +63,7 @@ class DocumentLoader:
                             vector=None,
                             metadata={
                                 "source": fileName,
-                            "page": page_num + 1,
+                                "page": page_num + 1,
                                 "type": "text",
                                 "filePath":file_path
                             }
