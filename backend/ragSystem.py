@@ -33,8 +33,13 @@ class RAGSystem:
     
     def ingest_document(self,fileNameList:List[str],collectionName:str):
         chunks=self.file_to_pageChunk(fileNameList,collectionName)
-        chunks=self.coreference_resolver.resolve_chunk_pairs(chunks)
         chunks=self.chunk_document(chunks)
+        chunks=self.coreference_resolver.resolve_chunk_pairs(chunks)
+        all_texts = [c.text for c in chunks]
+        all_vectors = TextEmbedder.encode(all_texts) 
+        for i, vector in enumerate(all_vectors):
+            chunks[i].vector = vector
+
         self.store_chunk(chunks,collectionName)
     
     

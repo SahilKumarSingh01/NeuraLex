@@ -67,11 +67,17 @@ export default function Message({ msg }) {
                 {msg.sources.map((source, idx) => (
                   <div key={idx} className="p-3 rounded-lg bg-white/5 border border-white/5 text-[11px]">
                     <div className="flex justify-between items-start mb-1.5">
-                      <span className="font-bold text-blue-400 truncate max-w-[200px]">
-                        {source.metadata.source}
-                      </span>
-                      <span className="text-gray-500 font-mono">Pg {source.metadata.page}</span>
+                    <span className="font-bold text-blue-400 truncate max-w-[180px]">
+                      {source.metadata.source}
+                    </span>
+                    <div className="flex gap-2 text-gray-500 font-mono shrink-0">
+                      <span>Pg {source.metadata.page}</span>
+                      <span className="text-gray-700">|</span>
+                      <span>S {source.metadata.sentence}</span>
                     </div>
+                  </div>
+
+                    {/* Main Content Preview */}
                     <p className="text-gray-400 italic line-clamp-3">"{source.text}"</p>
                   </div>
                 ))}

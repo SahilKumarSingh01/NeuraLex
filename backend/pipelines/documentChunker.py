@@ -26,9 +26,13 @@ class DocumentChunker:
         
         # --- Step 2: Text Splitting Logic ---
         # Zip the original chunk objects with the processed spaCy docs
+        new_chunk_text = ""
+        page=1
+        sentence_id = 0
+        left_start = 0
         for original_chunk, doc in zip(chunks, docs):
             sentences = [sent.text for sent in doc.sents]
-            new_chunk_text = ""
+
             sentence_id = 0
             left_start = 0
             
@@ -45,31 +49,39 @@ class DocumentChunker:
                         vector=None,
                         metadata=dict(original_chunk.metadata)
                     )
-                    c.metadata["sentence_range"] = f"{left_start}-{i}"
+                    c.metadata["sentence"] = f"{left_start+1}"
+                    a,b=page,original_chunk.metadata["page"]
+                    c.metadata["page"] = f"{a}-{b}" if a!=b else f"{a}"
+
                     intermediate_chunks.append(c)
                     
                     new_chunk_text = sentence
                     left_start = i
                     sentence_id += 1
+                    page=original_chunk.metadata["page"]
             
-            # Catch trailing text for this specific doc
-            if new_chunk_text:
-                c = Chunk(
-                    id=f"{original_chunk.id}_{sentence_id}",
-                    text=new_chunk_text,
-                    vector=None,
-                    metadata=dict(original_chunk.metadata)
-                )
-                c.metadata["sentence_range"] = f"{left_start}-{len(sentences)}"
-                intermediate_chunks.append(c)
+        # Catch trailing text for this specific doc
+        if new_chunk_text:
+            c = Chunk(
+                id=f"{original_chunk.id}_{sentence_id}",
+                text=new_chunk_text,
+                vector=None,
+                metadata=dict(original_chunk.metadata)
+            )
+            c.metadata["sentence"] = f"{left_start+1}"
+            a,b=page,original_chunk.metadata["page"]
+            c.metadata["page"] = f"{a}-{b}" if a!=b else f"{a}"
 
-        # --- Step 3: Batch Embedding (GPU Efficiency) ---
-        if intermediate_chunks:
-            all_texts = [c.text for c in intermediate_chunks]
-            # Send all processed sentences to the embedder in one batch
-            all_vectors = TextEmbedder.encode(all_texts) 
+            intermediate_chunks.append(c)
+
+        # # --- Step 3: Batch Embedding (GPU Efficiency) ---
+        # if intermediate_chunks:
+        #     all_texts = [c.text for c in intermediate_chunks]
+        #     # Send all processed sentences to the embedder in one batch
+        #     all_vectors = TextEmbedder.encode(all_texts) 
             
-            for i, vector in enumerate(all_vectors):
-                intermediate_chunks[i].vector = vector
+        #     for i, vector in enumerate(all_vectors):
+        #         intermediate_chunks[i].vector = vector
+        # Not doing here not responsibilty of chunker
                 
         return intermediate_chunks
